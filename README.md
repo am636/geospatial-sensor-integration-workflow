@@ -1,6 +1,8 @@
 # Geospatial Sensor Integration Workflow
 
-R workflow for integrating Sentinel-2 raster data with point and polygon datasets, deriving index products, and building linked spatial analysis tables for screening and exploratory modelling.
+Author: Ali Moayedi · Contact: am656@st-andrews.ac.uk
+
+R workflow for integrating Sentinel-2 raster data with point and polygon datasets, deriving linked index products such as `NDVI`, `EVI`, `SAVI`, `GNDVI`, and `NDWI`, and building connected analysis tables for raster, point, polygon, and multi-scene time-aware workflows.
 
 ## Project layout
 
@@ -36,13 +38,5 @@ Default behaviour:
 - time-aware scene handling for multi-date Sentinel inputs
 - scene-to-sensor time synchronisation where timestamps are available
 - point and polygon attribute tables carried into the integrated outputs
-
-Active index set in the default run:
-
-- `NDVI`
-- `EVI`
-- `SAVI`
-- `GNDVI`
-- `NDWI`
 
 If raster filenames do not include scene dates, the workflow keeps time fields as unknown rather than fabricating them.
