@@ -1,0 +1,20 @@
+# R session files
+.Rhistory
+.RData
+.Ruserdata
+
+# RStudio
+.Rproj.user/
+
+# Package and cache artefacts
+*.Rproj
+*.Rcheck/
+*.tar.gz
+
+# Local inputs
+data/inbox/*
+!data/inbox/README.md
+
+# Generated outputs
+output/*
+!output/.gitkeep
