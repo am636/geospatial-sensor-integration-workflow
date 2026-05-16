@@ -1,6 +1,6 @@
 # Geospatial Sensor Integration Workflow
 
-Author: Ali Moayedi · Contact: am656@st-andrews.ac.uk
+Author: Ali Moayedi · Contact: am636@st-andrews.ac.uk
 
 R workflow for integrating Sentinel-2 raster data with point and polygon datasets, deriving linked index products such as `NDVI`, `EVI`, `SAVI`, `GNDVI`, and `NDWI`, and building connected analysis tables for raster, point, polygon, and multi-scene time-aware workflows.
 
