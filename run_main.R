@@ -24,9 +24,9 @@ resolve_project_dir <- function() {
 
 PROJECT_DIR <- resolve_project_dir()
 source(file.path(PROJECT_DIR, "R", "00_bootstrap.R"))
-interview_source_modules(PROJECT_DIR)
+geo_source_modules(PROJECT_DIR)
 
-config <- default_interview_config(PROJECT_DIR)
+config <- default_sensor_integration_config(PROJECT_DIR)
 
 # Small user-facing configuration block.
 config$author_name <- ""
@@ -39,5 +39,5 @@ config$harmonization$force <- FALSE
 config$surfaces$enabled <- FALSE
 config$exploratory$run_gwr <- TRUE
 
-results <- run_interview_workflow(config)
+results <- run_sensor_integration_workflow(config)
 print(results$run_summary)

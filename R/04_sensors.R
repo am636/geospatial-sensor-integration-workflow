@@ -1,12 +1,12 @@
 # Sensor preparation and CRS inference.
 
-interview_drop_empty_columns <- function(dat) {
+geo_drop_empty_columns <- function(dat) {
   keep <- !vapply(dat, function(x) all(is.na(x) | trimws(as.character(x)) == ""), logical(1))
   dat[, keep, drop = FALSE]
 }
 
 
-interview_parse_sensor_time <- function(x) {
+geo_parse_sensor_time <- function(x) {
   suppressWarnings(
     lubridate::parse_date_time(
       x,
@@ -17,7 +17,7 @@ interview_parse_sensor_time <- function(x) {
 }
 
 
-interview_score_crs_candidate <- function(df, x_col, y_col, candidate_crs, raster_crs, raster_extent) {
+geo_score_crs_candidate <- function(df, x_col, y_col, candidate_crs, raster_crs, raster_extent) {
   sf_obj <- tryCatch(
     sf::st_as_sf(df, coords = c(x_col, y_col), crs = candidate_crs, remove = FALSE),
     error = function(e) NULL
@@ -47,7 +47,7 @@ interview_score_crs_candidate <- function(df, x_col, y_col, candidate_crs, raste
 }
 
 
-interview_infer_sensor_crs <- function(df, raster_reference_path, sensors_config) {
+geo_infer_sensor_crs <- function(df, raster_reference_path, sensors_config) {
   if (!is.null(sensors_config$manual_source_crs)) {
     return(list(source_crs = sensors_config$manual_source_crs, score_table = NULL))
   }
@@ -55,7 +55,7 @@ interview_infer_sensor_crs <- function(df, raster_reference_path, sensors_config
   ref <- terra::rast(raster_reference_path)
   candidates <- lapply(
     sensors_config$candidate_crs,
-    function(crs_code) interview_score_crs_candidate(
+    function(crs_code) geo_score_crs_candidate(
       df = df,
       x_col = sensors_config$x_col,
       y_col = sensors_config$y_col,
@@ -70,19 +70,19 @@ interview_infer_sensor_crs <- function(df, raster_reference_path, sensors_config
 }
 
 
-interview_prepare_sensor_table <- function(sensor_csv_path, raster_reference_path, config, output_dir) {
+geo_prepare_sensor_table <- function(sensor_csv_path, raster_reference_path, config, output_dir) {
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   dir.create(file.path(output_dir, "tables"), recursive = TRUE, showWarnings = FALSE)
   dir.create(file.path(output_dir, "vectors"), recursive = TRUE, showWarnings = FALSE)
 
   dat <- utils::read.csv(sensor_csv_path, stringsAsFactors = FALSE)
-  dat <- interview_sanitize_data_frame(dat)
-  dat <- interview_drop_empty_columns(dat)
+  dat <- geo_sanitize_data_frame(dat)
+  dat <- geo_drop_empty_columns(dat)
   dat <- dat[is.finite(dat[[config$sensors$x_col]]) & is.finite(dat[[config$sensors$y_col]]), , drop = FALSE]
 
-  inferred <- interview_infer_sensor_crs(dat, raster_reference_path, config$sensors)
+  inferred <- geo_infer_sensor_crs(dat, raster_reference_path, config$sensors)
   dat$timestamp_utc <- if (!is.null(config$sensors$time_col) && config$sensors$time_col %in% names(dat)) {
-    interview_parse_sensor_time(dat[[config$sensors$time_col]])
+    geo_parse_sensor_time(dat[[config$sensors$time_col]])
   } else if (!is.null(config$sensors$year_col) && config$sensors$year_col %in% names(dat)) {
     as.POSIXct(paste0(dat[[config$sensors$year_col]], "-01-01 00:00:00"), tz = "UTC")
   } else {

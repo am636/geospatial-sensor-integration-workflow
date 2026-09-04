@@ -1,6 +1,6 @@
 # Sentinel-2 index logic.
 
-interview_safe_ratio <- function(num, den) {
+geo_safe_ratio <- function(num, den) {
   out <- num / den
   out[den == 0] <- NA
   out[!is.finite(out)] <- NA
@@ -8,12 +8,12 @@ interview_safe_ratio <- function(num, den) {
 }
 
 
-interview_supported_indices <- function() {
+geo_supported_indices <- function() {
   list(
     ndvi = list(
       label = "NDVI",
       required_bands = c("B08", "B04"),
-      formula = function(b) interview_safe_ratio(b$B08 - b$B04, b$B08 + b$B04),
+      formula = function(b) geo_safe_ratio(b$B08 - b$B04, b$B08 + b$B04),
       palette = c("#7f3b08", "#f7f7f7", "#1a9850")
     ),
     evi = list(
@@ -31,20 +31,20 @@ interview_supported_indices <- function() {
     gndvi = list(
       label = "GNDVI",
       required_bands = c("B08", "B03"),
-      formula = function(b) interview_safe_ratio(b$B08 - b$B03, b$B08 + b$B03),
+      formula = function(b) geo_safe_ratio(b$B08 - b$B03, b$B08 + b$B03),
       palette = c("#7f3b08", "#f7f7f7", "#1a9850")
     ),
     ndwi = list(
       label = "NDWI",
       required_bands = c("B03", "B08"),
-      formula = function(b) interview_safe_ratio(b$B03 - b$B08, b$B03 + b$B08),
+      formula = function(b) geo_safe_ratio(b$B03 - b$B08, b$B03 + b$B08),
       palette = c("#543005", "#f5f5f5", "#0571b0")
     )
   )
 }
 
 
-interview_build_scene_table <- function(raster_inventory) {
+geo_build_scene_table <- function(raster_inventory) {
   x <- raster_inventory
   x$scene_datetime <- as.POSIXct(x$scene_datetime, tz = "UTC")
   x$scene_key <- paste(
@@ -56,7 +56,7 @@ interview_build_scene_table <- function(raster_inventory) {
 }
 
 
-interview_apply_cloud_mask <- function(index_raster, scene_rows, cloud_mask_config) {
+geo_apply_cloud_mask <- function(index_raster, scene_rows, cloud_mask_config) {
   if (!isTRUE(cloud_mask_config$enabled)) {
     return(index_raster)
   }
@@ -74,9 +74,9 @@ interview_apply_cloud_mask <- function(index_raster, scene_rows, cloud_mask_conf
 }
 
 
-interview_compute_index_maps <- function(index_inventory, output_dir, plot_config) {
+geo_compute_index_maps <- function(index_inventory, output_dir, plot_config) {
   dir.create(file.path(output_dir, "figures"), recursive = TRUE, showWarnings = FALSE)
-  supported <- interview_supported_indices()
+  supported <- geo_supported_indices()
   for (i in seq_len(nrow(index_inventory))) {
     r <- terra::rast(index_inventory$raster_path[i])
     vals <- terra::as.data.frame(r, xy = TRUE, na.rm = TRUE)
@@ -86,7 +86,7 @@ interview_compute_index_maps <- function(index_inventory, output_dir, plot_confi
       ggplot2::geom_raster() +
       ggplot2::scale_fill_gradientn(colors = spec$palette, name = spec$label) +
       ggplot2::coord_equal() +
-      interview_theme() +
+      geo_theme() +
       ggplot2::labs(
         title = paste0(spec$label, " map"),
         subtitle = paste0("Scene: ", index_inventory$scene_label[i])
@@ -105,13 +105,13 @@ interview_compute_index_maps <- function(index_inventory, output_dir, plot_confi
 run_sentinel2_index_module <- function(prepared_inventory, config, output_dir) {
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   dir.create(file.path(output_dir, "rasters"), recursive = TRUE, showWarnings = FALSE)
-  scenes <- interview_build_scene_table(prepared_inventory)
+  scenes <- geo_build_scene_table(prepared_inventory)
   if (!is.null(config$selected_sentinel_layers) && length(config$selected_sentinel_layers) > 0) {
-    required_bands <- unique(unlist(lapply(interview_supported_indices()[config$selected_indices], `[[`, "required_bands")))
+    required_bands <- unique(unlist(lapply(geo_supported_indices()[config$selected_indices], `[[`, "required_bands")))
     keep_bands <- unique(c(config$selected_sentinel_layers, required_bands))
     scenes <- scenes[scenes$band_code %in% keep_bands, , drop = FALSE]
   }
-  supported <- interview_supported_indices()
+  supported <- geo_supported_indices()
   selected <- intersect(config$selected_indices, names(supported))
   if (length(selected) == 0) {
     stop("No supported indices selected.")
@@ -134,7 +134,7 @@ run_sentinel2_index_module <- function(prepared_inventory, config, output_dir) {
       bands <- band_layers[spec$required_bands]
       index_raster <- spec$formula(bands)
       names(index_raster) <- index_name
-      index_raster <- interview_apply_cloud_mask(index_raster, scene_rows, config$cloud_mask)
+      index_raster <- geo_apply_cloud_mask(index_raster, scene_rows, config$cloud_mask)
 
       out_name <- paste0(index_name, "_", scene_tag, ".tif")
       out_path <- file.path(output_dir, "rasters", out_name)
@@ -157,6 +157,6 @@ run_sentinel2_index_module <- function(prepared_inventory, config, output_dir) {
 
   index_inventory <- do.call(rbind, index_rows)
   utils::write.csv(index_inventory, file.path(output_dir, "index_inventory.csv"), row.names = FALSE)
-  interview_compute_index_maps(index_inventory, output_dir, config$plots)
+  geo_compute_index_maps(index_inventory, output_dir, config$plots)
   index_inventory
 }

@@ -27,11 +27,11 @@ run_exploratory_analysis <- function(point_integration_sf, output_dir, config) {
   utils::write.csv(regression_summary, file.path(output_dir, "tables", "regression_summary.csv"), row.names = FALSE)
   utils::write.csv(regression_terms, file.path(output_dir, "tables", "regression_terms.csv"), row.names = FALSE)
 
-  interview_plot_scatter(model_df, predictor_var, response_var, file.path(output_dir, "figures", "scatter_relationship.png"), config)
-  interview_plot_residual_vs_fitted(model_df, file.path(output_dir, "figures", "residual_vs_fitted.png"), config)
-  interview_plot_point_map(dat, response_var, file.path(output_dir, "figures", "observed_map.png"), paste("Observed", interview_pretty_label(response_var), "at monitoring sites"), FALSE, 0, config, legend_label = interview_pretty_label(response_var))
-  interview_plot_point_map(dat, "fitted_value", file.path(output_dir, "figures", "fitted_map.png"), paste("Fitted", interview_pretty_label(response_var), "at monitoring sites"), FALSE, 0, config, legend_label = paste("Fitted", interview_pretty_label(response_var)))
-  interview_plot_point_map(dat, "residual_value", file.path(output_dir, "figures", "residual_map.png"), "Regression residuals at monitoring sites", TRUE, 0, config, legend_label = paste("Residual", interview_pretty_label(response_var)))
+  geo_plot_scatter(model_df, predictor_var, response_var, file.path(output_dir, "figures", "scatter_relationship.png"), config)
+  geo_plot_residual_vs_fitted(model_df, file.path(output_dir, "figures", "residual_vs_fitted.png"), config)
+  geo_plot_point_map(dat, response_var, file.path(output_dir, "figures", "observed_map.png"), paste("Observed", geo_pretty_label(response_var), "at monitoring sites"), FALSE, 0, config, legend_label = geo_pretty_label(response_var))
+  geo_plot_point_map(dat, "fitted_value", file.path(output_dir, "figures", "fitted_map.png"), paste("Fitted", geo_pretty_label(response_var), "at monitoring sites"), FALSE, 0, config, legend_label = paste("Fitted", geo_pretty_label(response_var)))
+  geo_plot_point_map(dat, "residual_value", file.path(output_dir, "figures", "residual_map.png"), "Regression residuals at monitoring sites", TRUE, 0, config, legend_label = paste("Residual", geo_pretty_label(response_var)))
 
   coords <- sf::st_coordinates(sf::st_transform(dat, sf::st_crs(terra::crs(terra::vect(dat)))))
   knn <- spdep::knearneigh(coords, k = min(config$exploratory$k_neighbors, nrow(dat) - 1))
@@ -72,10 +72,10 @@ run_exploratory_analysis <- function(point_integration_sf, output_dir, config) {
 
     coef_col <- predictor_var
     if (coef_col %in% names(gwr_sf)) {
-      interview_plot_point_map(gwr_sf, coef_col, file.path(output_dir, "figures", "gwr_local_coefficient_map.png"), paste("GWR local coefficient for", interview_pretty_label(predictor_var)), TRUE, 0, config, legend_label = paste("GWR coefficient:", interview_pretty_label(predictor_var)))
+      geo_plot_point_map(gwr_sf, coef_col, file.path(output_dir, "figures", "gwr_local_coefficient_map.png"), paste("GWR local coefficient for", geo_pretty_label(predictor_var)), TRUE, 0, config, legend_label = paste("GWR coefficient:", geo_pretty_label(predictor_var)))
     }
     if ("Local_R2" %in% names(gwr_sf)) {
-      interview_plot_quantile_map(gwr_sf, "Local_R2", file.path(output_dir, "figures", "gwr_local_r2_map.png"), "GWR local R2 quantile classes", config, legend_label = "Local R2 quantiles")
+      geo_plot_quantile_map(gwr_sf, "Local_R2", file.path(output_dir, "figures", "gwr_local_r2_map.png"), "GWR local R2 quantile classes", config, legend_label = "Local R2 quantiles")
     }
 
     gwr_table <- as.data.frame(gwr_sf)
@@ -116,7 +116,7 @@ run_exploratory_analysis <- function(point_integration_sf, output_dir, config) {
       stringsAsFactors = FALSE
     )
     utils::write.csv(gwr_decision, file.path(output_dir, "tables", "gwr_recommendation.csv"), row.names = FALSE)
-    interview_plot_gwr_recommendation(gwr_decision, file.path(output_dir, "figures", "gwr_recommendation.png"), config)
+    geo_plot_gwr_recommendation(gwr_decision, file.path(output_dir, "figures", "gwr_recommendation.png"), config)
   }
 
   list(

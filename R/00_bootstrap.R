@@ -5,7 +5,7 @@
 }
 
 
-interview_require_packages <- function(extra = character(0)) {
+geo_require_packages <- function(extra = character(0)) {
   base_pkgs <- c(
     "terra", "sf", "ggplot2", "dplyr", "tidyr", "lubridate",
     "gstat", "sp", "spdep", "GWmodel", "broom"
@@ -23,7 +23,7 @@ interview_require_packages <- function(extra = character(0)) {
 }
 
 
-interview_source_modules <- function(project_dir) {
+geo_source_modules <- function(project_dir) {
   module_dir <- file.path(project_dir, "R")
   module_files <- sort(list.files(module_dir, pattern = "^[0-9]{2}_.*\\.R$", full.names = TRUE))
   for (file_path in module_files) {
@@ -36,7 +36,7 @@ interview_source_modules <- function(project_dir) {
 }
 
 
-interview_create_dirs <- function(project_dir) {
+geo_create_dirs <- function(project_dir) {
   dirs <- c(
     file.path(project_dir, "data"),
     file.path(project_dir, "data", "inbox"),
@@ -58,7 +58,7 @@ interview_create_dirs <- function(project_dir) {
 }
 
 
-interview_write_markdown_table <- function(df) {
+geo_write_markdown_table <- function(df) {
   if (nrow(df) == 0) {
     return("_No rows available._")
   }
@@ -84,24 +84,24 @@ interview_write_markdown_table <- function(df) {
 }
 
 
-interview_sanitize_text <- function(x) {
+geo_sanitize_text <- function(x) {
   out <- iconv(as.character(x), from = "", to = "UTF-8", sub = "")
   out[is.na(out)] <- ""
   out
 }
 
 
-interview_sanitize_data_frame <- function(dat) {
+geo_sanitize_data_frame <- function(dat) {
   for (nm in names(dat)) {
     if (is.character(dat[[nm]]) || is.factor(dat[[nm]])) {
-      dat[[nm]] <- interview_sanitize_text(dat[[nm]])
+      dat[[nm]] <- geo_sanitize_text(dat[[nm]])
     }
   }
   dat
 }
 
 
-default_interview_config <- function(project_dir = normalizePath(getwd(), winslash = "/", mustWork = TRUE)) {
+default_sensor_integration_config <- function(project_dir = normalizePath(getwd(), winslash = "/", mustWork = TRUE)) {
   list(
     project_dir = project_dir,
     project_name = "Geospatial Sensor Integration Workflow",
