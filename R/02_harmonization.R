@@ -1,6 +1,6 @@
 # Conditional harmonization helpers.
 
-interview_choose_reference_raster <- function(raster_inventory, manual_reference = NULL) {
+geo_choose_reference_raster <- function(raster_inventory, manual_reference = NULL) {
   if (!is.null(manual_reference) && manual_reference %in% raster_inventory$file_name) {
     return(raster_inventory$file_path[match(manual_reference, raster_inventory$file_name)])
   }
@@ -15,7 +15,7 @@ interview_choose_reference_raster <- function(raster_inventory, manual_reference
 }
 
 
-interview_rasters_need_harmonization <- function(raster_paths, reference_path, manual_target_crs = NULL) {
+geo_rasters_need_harmonization <- function(raster_paths, reference_path, manual_target_crs = NULL) {
   ref <- terra::rast(reference_path)
   for (path in raster_paths) {
     x <- terra::rast(path)
@@ -30,7 +30,7 @@ interview_rasters_need_harmonization <- function(raster_paths, reference_path, m
 }
 
 
-interview_harmonize_single_raster <- function(file_path, reference_raster, output_path, method = "bilinear", target_crs = NULL) {
+geo_harmonize_single_raster <- function(file_path, reference_raster, output_path, method = "bilinear", target_crs = NULL) {
   x <- terra::rast(file_path)
 
   if (!is.null(target_crs) && !identical(terra::crs(x), target_crs)) {
@@ -54,14 +54,14 @@ run_conditional_harmonization <- function(raster_inventory, output_dir, harmoniz
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   dir.create(file.path(output_dir, "rasters"), recursive = TRUE, showWarnings = FALSE)
 
-  reference_path <- interview_choose_reference_raster(
+  reference_path <- geo_choose_reference_raster(
     raster_inventory = raster_inventory,
     manual_reference = harmonization_config$manual_reference
   )
   reference_raster <- terra::rast(reference_path)
 
   needs_harmonization <- isTRUE(harmonization_config$force) ||
-    interview_rasters_need_harmonization(
+    geo_rasters_need_harmonization(
       raster_paths = raster_inventory$file_path,
       reference_path = reference_path,
       manual_target_crs = harmonization_config$manual_target_crs
@@ -80,7 +80,7 @@ run_conditional_harmonization <- function(raster_inventory, output_dir, harmoniz
         harmonization_config$continuous_method
       }
       out_path <- file.path(output_dir, "rasters", basename(out_inventory$file_path[i]))
-      out_inventory$analysis_raster_path[i] <- interview_harmonize_single_raster(
+      out_inventory$analysis_raster_path[i] <- geo_harmonize_single_raster(
         file_path = out_inventory$file_path[i],
         reference_raster = reference_raster,
         output_path = out_path,
