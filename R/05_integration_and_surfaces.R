@@ -1,6 +1,6 @@
 # Point and polygon integration plus sensor surfaces.
 
-interview_extract_value_from_raster <- function(raster_path, points_sf, method = "bilinear") {
+geo_extract_value_from_raster <- function(raster_path, points_sf, method = "bilinear") {
   x <- terra::rast(raster_path)
   pts <- sf::st_transform(points_sf, sf::st_crs(terra::crs(x)))
   out <- terra::extract(x, terra::vect(pts), method = method, bind = FALSE)
@@ -8,7 +8,7 @@ interview_extract_value_from_raster <- function(raster_path, points_sf, method =
 }
 
 
-interview_match_scene_times <- function(point_times, scene_times) {
+geo_match_scene_times <- function(point_times, scene_times) {
   if (length(scene_times) == 0) {
     return(integer(length(point_times)))
   }
@@ -41,14 +41,14 @@ run_point_raster_integration <- function(sensor_sites_sf, index_inventory, outpu
     subset_idx <- subset_idx[order(subset_idx$scene_datetime), , drop = FALSE]
     scene_times <- subset_idx$scene_datetime
     sensor_times <- dat$timestamp_utc
-    matched <- interview_match_scene_times(sensor_times, scene_times)
+    matched <- geo_match_scene_times(sensor_times, scene_times)
     dat[[paste0(index_name, "_scene_datetime")]] <- scene_times[matched]
     dat[[paste0(index_name, "_value")]] <- NA_real_
 
     for (i in seq_len(nrow(subset_idx))) {
       keep <- matched == i
       if (!any(keep)) next
-      dat[[paste0(index_name, "_value")]][keep] <- interview_extract_value_from_raster(
+      dat[[paste0(index_name, "_value")]][keep] <- geo_extract_value_from_raster(
         raster_path = subset_idx$raster_path[i],
         points_sf = dat[keep, , drop = FALSE],
         method = "bilinear"
@@ -67,7 +67,7 @@ run_point_raster_integration <- function(sensor_sites_sf, index_inventory, outpu
     for (index_name in selected_indices) {
       idx_rows <- index_inventory[index_inventory$index_name == index_name, , drop = FALSE]
       if (nrow(idx_rows) == 0) next
-      interview_plot_index_with_points(
+      geo_plot_index_with_points(
         index_raster_path = idx_rows$raster_path[1],
         points_sf = dat,
         point_value_col = point_label,
@@ -129,7 +129,7 @@ run_polygon_raster_integration <- function(vector_inventory, index_inventory, ou
 }
 
 
-interview_make_surface_template <- function(reference_raster_path, resolution = 100) {
+geo_make_surface_template <- function(reference_raster_path, resolution = 100) {
   ref <- terra::rast(reference_raster_path)
   terra::rast(
     xmin = terra::xmin(ref),
@@ -142,7 +142,7 @@ interview_make_surface_template <- function(reference_raster_path, resolution = 
 }
 
 
-interview_idw_surface <- function(points_sf, value_col, template, idp = 2, nmax = 12) {
+geo_idw_surface <- function(points_sf, value_col, template, idp = 2, nmax = 12) {
   pts <- points_sf[is.finite(points_sf[[value_col]]), , drop = FALSE]
   pts <- sf::st_transform(pts, sf::st_crs(terra::crs(template)))
   pts_sp <- methods::as(pts, "Spatial")
@@ -172,14 +172,14 @@ run_sensor_surface_module <- function(sensor_sites_sf, reference_raster_path, ou
   dir.create(file.path(output_dir, "figures"), recursive = TRUE, showWarnings = FALSE)
   dir.create(file.path(output_dir, "tables"), recursive = TRUE, showWarnings = FALSE)
 
-  template <- interview_make_surface_template(reference_raster_path, resolution = config$surfaces$resolution)
+  template <- geo_make_surface_template(reference_raster_path, resolution = config$surfaces$resolution)
   distance_raster <- terra::distance(template, terra::vect(sensor_sites_sf))
   terra::writeRaster(distance_raster, file.path(output_dir, "rasters", "distance_to_nearest_monitor_m.tif"), overwrite = TRUE)
 
   summary_rows <- list()
   for (value_col in config$surfaces$value_cols) {
     if (!value_col %in% names(sensor_sites_sf)) next
-    surface <- interview_idw_surface(
+    surface <- geo_idw_surface(
       points_sf = sensor_sites_sf,
       value_col = value_col,
       template = template,
@@ -188,7 +188,7 @@ run_sensor_surface_module <- function(sensor_sites_sf, reference_raster_path, ou
     )
     raster_path <- file.path(output_dir, "rasters", paste0(value_col, "_idw_", config$surfaces$resolution, "m.tif"))
     terra::writeRaster(surface, raster_path, overwrite = TRUE)
-    interview_plot_sensor_surface(surface, sensor_sites_sf, value_col, file.path(output_dir, "figures", paste0(value_col, "_surface_map.png")), config)
+    geo_plot_sensor_surface(surface, sensor_sites_sf, value_col, file.path(output_dir, "figures", paste0(value_col, "_surface_map.png")), config)
     vals <- terra::values(surface, mat = FALSE)
     vals <- vals[is.finite(vals)]
     summary_rows[[length(summary_rows) + 1]] <- data.frame(
