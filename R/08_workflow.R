@@ -1,8 +1,8 @@
 # Workflow orchestration.
 
-run_interview_workflow <- function(config) {
-  interview_require_packages()
-  interview_create_dirs(config$project_dir)
+run_sensor_integration_workflow <- function(config) {
+  geo_require_packages()
+  geo_create_dirs(config$project_dir)
 
   inspect_dir <- file.path(config$output_dir, "00_initial_inspection")
   harmonize_dir <- file.path(config$output_dir, "01_raster_harmonization")
@@ -24,7 +24,7 @@ run_interview_workflow <- function(config) {
     stop("No raster files were found in data/inbox.")
   }
 
-  sensor_table_path <- interview_select_sensor_table(inspected$table_inventory, config$sensors)
+  sensor_table_path <- geo_select_sensor_table(inspected$table_inventory, config$sensors)
   if (is.null(sensor_table_path)) {
     stop("No suitable sensor table was detected in data/inbox.")
   }
@@ -32,7 +32,7 @@ run_interview_workflow <- function(config) {
   harmonized <- run_conditional_harmonization(inspected$raster_inventory, harmonize_dir, config$harmonization)
   index_inventory <- run_sentinel2_index_module(harmonized$inventory, config, index_dir)
 
-  sensor_outputs <- interview_prepare_sensor_table(
+  sensor_outputs <- geo_prepare_sensor_table(
     sensor_csv_path = sensor_table_path,
     raster_reference_path = harmonized$reference_path,
     config = config,
