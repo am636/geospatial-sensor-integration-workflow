@@ -1,6 +1,6 @@
 # File discovery, metadata inspection, and Sentinel parsing.
 
-interview_classify_file <- function(file_path) {
+geo_classify_file <- function(file_path) {
   ext <- tolower(tools::file_ext(file_path))
   if (ext %in% c("tif", "tiff", "jp2")) return("raster")
   if (ext %in% c("gpkg", "shp", "geojson")) return("vector")
@@ -10,20 +10,20 @@ interview_classify_file <- function(file_path) {
 }
 
 
-interview_list_files <- function(data_dir) {
+geo_list_files <- function(data_dir) {
   files <- list.files(data_dir, recursive = TRUE, full.names = TRUE, all.files = FALSE, no.. = TRUE)
   files <- files[!dir.exists(files)]
   files <- sort(normalizePath(files, winslash = "/", mustWork = TRUE))
   data.frame(
     file_path = files,
     file_name = basename(files),
-    file_type = vapply(files, interview_classify_file, character(1)),
+    file_type = vapply(files, geo_classify_file, character(1)),
     stringsAsFactors = FALSE
   )
 }
 
 
-interview_parse_band_code <- function(file_name) {
+geo_parse_band_code <- function(file_name) {
   base_name <- tools::file_path_sans_ext(basename(file_name))
   band_match <- regmatches(base_name, regexpr("B[0-9]{1,2}|SCL", base_name, ignore.case = TRUE))
   if (length(band_match) == 0 || is.na(band_match)) {
@@ -38,7 +38,7 @@ interview_parse_band_code <- function(file_name) {
 }
 
 
-interview_parse_scene_datetime <- function(file_name, fallback_datetime = NULL) {
+geo_parse_scene_datetime <- function(file_name, fallback_datetime = NULL) {
   base_name <- tools::file_path_sans_ext(basename(file_name))
   ts_match <- regmatches(base_name, regexpr("[0-9]{8}T[0-9]{6}", base_name))
   if (length(ts_match) == 1 && !is.na(ts_match) && nzchar(ts_match)) {
@@ -58,7 +58,7 @@ interview_parse_scene_datetime <- function(file_name, fallback_datetime = NULL) 
 }
 
 
-interview_parse_tile_id <- function(file_name) {
+geo_parse_tile_id <- function(file_name) {
   base_name <- tools::file_path_sans_ext(basename(file_name))
   tile_match <- regmatches(base_name, regexpr("T[0-9]{2}[A-Z]{3}", base_name, ignore.case = TRUE))
   if (length(tile_match) == 1 && !is.na(tile_match) && nzchar(tile_match)) {
@@ -68,15 +68,15 @@ interview_parse_tile_id <- function(file_name) {
 }
 
 
-interview_raster_metadata <- function(file_path, fallback_datetime = NULL) {
+geo_raster_metadata <- function(file_path, fallback_datetime = NULL) {
   x <- terra::rast(file_path)
   ext <- terra::ext(x)
-  scene_datetime <- interview_parse_scene_datetime(file_path, fallback_datetime = fallback_datetime)
+  scene_datetime <- geo_parse_scene_datetime(file_path, fallback_datetime = fallback_datetime)
   data.frame(
     file_name = basename(file_path),
     file_path = normalizePath(file_path, winslash = "/", mustWork = TRUE),
-    band_code = interview_parse_band_code(file_path),
-    tile_id = interview_parse_tile_id(file_path),
+    band_code = geo_parse_band_code(file_path),
+    tile_id = geo_parse_tile_id(file_path),
     scene_datetime = scene_datetime,
     scene_date = if (!is.na(scene_datetime)) format(scene_datetime, "%Y-%m-%d", tz = "UTC") else NA_character_,
     crs = terra::crs(x),
@@ -94,7 +94,7 @@ interview_raster_metadata <- function(file_path, fallback_datetime = NULL) {
 }
 
 
-interview_vector_metadata <- function(file_path) {
+geo_vector_metadata <- function(file_path) {
   x <- sf::st_read(file_path, quiet = TRUE)
   data.frame(
     file_name = basename(file_path),
@@ -107,9 +107,9 @@ interview_vector_metadata <- function(file_path) {
 }
 
 
-interview_table_metadata <- function(file_path) {
+geo_table_metadata <- function(file_path) {
   dat <- utils::read.csv(file_path, stringsAsFactors = FALSE)
-  dat <- interview_sanitize_data_frame(dat)
+  dat <- geo_sanitize_data_frame(dat)
   empty_cols <- vapply(dat, function(x) all(is.na(x) | trimws(as.character(x)) == ""), logical(1))
   data.frame(
     file_name = basename(file_path),
@@ -123,14 +123,14 @@ interview_table_metadata <- function(file_path) {
 }
 
 
-interview_select_sensor_table <- function(table_inventory, sensors_config) {
+geo_select_sensor_table <- function(table_inventory, sensors_config) {
   if (nrow(table_inventory) == 0) {
     return(NULL)
   }
 
   scored <- lapply(seq_len(nrow(table_inventory)), function(i) {
     dat <- utils::read.csv(table_inventory$file_path[i], stringsAsFactors = FALSE)
-    dat <- interview_sanitize_data_frame(dat)
+    dat <- geo_sanitize_data_frame(dat)
     names_lc <- tolower(names(dat))
     score <- 0
     score <- score + ifelse(tolower(sensors_config$x_col) %in% names_lc, 3, 0)
@@ -152,28 +152,28 @@ interview_select_sensor_table <- function(table_inventory, sensors_config) {
 
 
 run_auto_ingest_inspection <- function(data_dir, output_dir, fallback_datetime = NULL) {
-  interview_require_packages()
+  geo_require_packages()
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-  inventory <- interview_list_files(data_dir)
+  inventory <- geo_list_files(data_dir)
   raster_files <- inventory[inventory$file_type == "raster", , drop = FALSE]
   vector_files <- inventory[inventory$file_type == "vector", , drop = FALSE]
   table_files <- inventory[inventory$file_type == "table", , drop = FALSE]
 
   raster_inventory <- if (nrow(raster_files) > 0) {
-    do.call(rbind, lapply(raster_files$file_path, interview_raster_metadata, fallback_datetime = fallback_datetime))
+    do.call(rbind, lapply(raster_files$file_path, geo_raster_metadata, fallback_datetime = fallback_datetime))
   } else {
     data.frame()
   }
 
   vector_inventory <- if (nrow(vector_files) > 0) {
-    do.call(rbind, lapply(vector_files$file_path, interview_vector_metadata))
+    do.call(rbind, lapply(vector_files$file_path, geo_vector_metadata))
   } else {
     data.frame()
   }
 
   table_inventory <- if (nrow(table_files) > 0) {
-    do.call(rbind, lapply(table_files$file_path, interview_table_metadata))
+    do.call(rbind, lapply(table_files$file_path, geo_table_metadata))
   } else {
     data.frame()
   }
@@ -193,13 +193,13 @@ run_auto_ingest_inspection <- function(data_dir, output_dir, fallback_datetime =
   )
 
   if (nrow(raster_inventory) > 0) {
-    report_lines <- c(report_lines, "## Raster Inventory", "", interview_write_markdown_table(raster_inventory))
+    report_lines <- c(report_lines, "## Raster Inventory", "", geo_write_markdown_table(raster_inventory))
   }
   if (nrow(vector_inventory) > 0) {
-    report_lines <- c(report_lines, "", "## Vector Inventory", "", interview_write_markdown_table(vector_inventory))
+    report_lines <- c(report_lines, "", "## Vector Inventory", "", geo_write_markdown_table(vector_inventory))
   }
   if (nrow(table_inventory) > 0) {
-    report_lines <- c(report_lines, "", "## Table Inventory", "", interview_write_markdown_table(table_inventory))
+    report_lines <- c(report_lines, "", "## Table Inventory", "", geo_write_markdown_table(table_inventory))
   }
   writeLines(report_lines, con = file.path(output_dir, "inspection_summary.md"))
 
